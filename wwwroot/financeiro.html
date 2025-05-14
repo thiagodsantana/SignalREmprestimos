@@ -1,0 +1,167 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <title>Financeiro - Contratos</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fc;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 0 12px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            cursor: pointer;
+            background-color: #eee;
+            margin-right: 0.5rem;
+            border-radius: 8px 8px 0 0;
+        }
+
+            .tab.active {
+                background-color: white;
+                font-weight: bold;
+                border-bottom: 1px solid white;
+            }
+
+        .tab-content {
+            display: none;
+        }
+
+            .tab-content.active {
+                display: block;
+            }
+
+        .card {
+            border-left: 5px solid #27ae60;
+            background-color: #eafaf1;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+            .card.pago {
+                background-color: #dfe6e9;
+                border-left-color: #636e72;
+            }
+
+        .status {
+            margin-top: 0.5rem;
+            font-weight: bold;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+
+            button:hover {
+                background-color: #2980b9;
+            }
+
+            button[disabled] {
+                background-color: #95a5a6;
+                cursor: default;
+            }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Financeiro - Contratos</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="mostrarAba('aprovados')">Aprovados</div>
+            <div class="tab" onclick="mostrarAba('pagos')">Pagos</div>
+        </div>
+
+        <div id="aprovados" class="tab-content active"></div>
+        <div id="pagos" class="tab-content"></div>
+    </div>
+
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/emprestimohub")
+            .build();
+
+        connection.on("StatusAtualizado", emp => {
+            atualizarEmprestimo(emp);
+        });
+
+        connection.start();
+
+        function mostrarAba(aba) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+
+            document.querySelector(`.tab[onclick*="${aba}"]`).classList.add('active');
+            document.getElementById(aba).classList.add('active');
+        }
+
+        async function carregarTodos() {
+            const res = await fetch("/api/emprestimos/aprovados");
+            const lista = await res.json();
+            lista.forEach(emp => atualizarEmprestimo(emp));
+        }
+
+        function atualizarEmprestimo(emp) {
+            // Remove de ambas as listas se já existir
+            document.getElementById(emp.id)?.remove();
+
+            const div = document.createElement("div");
+            div.className = "card";
+            div.id = emp.id;
+
+            if (emp.status === "Aprovado") {
+                div.innerHTML = render(emp, true);
+                document.getElementById("aprovados").prepend(div);
+            } else if (emp.status === "Pago") {
+                div.classList.add("pago");
+                div.innerHTML = render(emp, false);
+                document.getElementById("pagos").prepend(div);
+            }
+        }
+
+        function render(emp, podePagar) {
+            return `
+                    <strong>${emp.cliente}</strong><br/>
+                    Valor: R$${emp.valor} — ${emp.parcelas}x<br/>
+                    <div class="status">Status: ${emp.status}</div>
+                    ${podePagar ? `<button onclick="marcarComoPago('${emp.id}')">Marcar como Pago</button>` : `<button disabled>Pago</button>`}
+                `;
+        }
+
+        async function marcarComoPago(id) {
+            await fetch(`/api/emprestimos/${id}/pagar`, { method: "PUT" });
+        }
+
+        carregarTodos();
+    </script>
+</body>
+</html>

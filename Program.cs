@@ -7,7 +7,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Adiciona o SignalR
 builder.Services.AddSignalR();
 
-// Habilita o CORS (caso o frontend esteja em outro domínio)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
@@ -21,11 +20,9 @@ var emprestimos = new List<Emprestimo>();
 
 var app = builder.Build();
 
-// Habilita CORS para permitir requisições de qualquer origem
 app.UseCors("AllowAll");
 
-// Servir arquivos estáticos (caso necessário)
-app.UseStaticFiles(); // Serve arquivos na pasta wwwroot
+app.UseStaticFiles(); 
 
 // Endpoint para solicitar um empréstimo
 app.MapPost("/api/emprestimos", async (Emprestimo emprestimo, IHubContext<EmprestimoHub> hub) =>
@@ -57,10 +54,31 @@ app.MapPut("/api/emprestimos/{id}/{status}", async (string id, string status, IH
     return Results.Ok(new { mensagem = $"Status do empréstimo {id} alterado para {status}.", emprestimo });
 });
 
+// Endpoint para listar todos os empréstimos aprovados
+app.MapGet("/api/emprestimos/aprovados", () =>
+{
+    var aprovados = emprestimos.Where(e => e.Status == "Aprovado");
+    return Results.Ok(aprovados);
+});
+
+// Endpoint para marcar empréstimo como pago
+app.MapPut("/api/emprestimos/{id}/pagar", async (string id, IHubContext<EmprestimoHub> hub) =>
+{
+    var emprestimo = emprestimos.FirstOrDefault(e => e.Id == id);
+    if (emprestimo == null) return Results.NotFound();
+
+    emprestimo.Status = "Pago";
+    Console.WriteLine($"Empréstimo {id} foi marcado como pago.");
+
+    await hub.Clients.All.SendAsync("StatusAtualizado", emprestimo);
+
+    return Results.Ok(new { mensagem = $"Empréstimo {id} pago com sucesso.", emprestimo });
+});
+
+
 // Mapeia o endpoint do SignalR Hub
 app.MapHub<EmprestimoHub>("/emprestimohub");
 
-// Mapeia o fallback para servir a página principal (caso você tenha arquivos estáticos)
 app.MapFallbackToFile("cliente.html");
 
 app.Run();
