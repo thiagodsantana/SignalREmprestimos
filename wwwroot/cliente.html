@@ -1,0 +1,117 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <title>Solicitar Empréstimo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fc;
+            color: #333;
+            padding: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+        }
+
+            button:hover {
+                background-color: #2980b9;
+            }
+
+        .status {
+            margin-top: 1rem;
+            text-align: center;
+            padding: 1rem;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+        }
+
+            .status.success {
+                background-color: #2ecc71;
+                color: white;
+            }
+
+            .status.error {
+                background-color: #e74c3c;
+                color: white;
+            }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Solicitar Empréstimo</h1>
+        <input type="text" id="cliente" placeholder="Nome do Cliente" required />
+        <input type="number" id="valor" placeholder="Valor do Empréstimo" required />
+        <input type="number" id="parcelas" placeholder="Número de Parcelas" required />
+        <button onclick="solicitar()">Solicitar</button>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/emprestimohub")
+            .build();
+
+        connection.on("StatusAtualizado", emp => {
+            const statusDiv = document.getElementById("status");
+            statusDiv.innerHTML = `<div class="status success">Status do seu empréstimo: ${emp.status}</div>`;
+        });
+
+        connection.start();
+
+        async function solicitar() {
+            const cliente = document.getElementById("cliente").value;
+            const valor = parseFloat(document.getElementById("valor").value);
+            const parcelas = parseInt(document.getElementById("parcelas").value);
+
+            const res = await fetch("/api/emprestimos", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cliente, valor, parcelas })
+            });
+
+            const emp = await res.json();
+
+            if (emp.id) {
+                document.getElementById("status").innerHTML = `
+                        <div class="status success">
+                            Empréstimo solicitado com sucesso! Aguardando aprovação.
+                        </div>
+                    `;
+            }
+        }
+    </script>
+
+</body>
+</html>

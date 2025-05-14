@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <title>Aprovar/Rejeitar Empréstimos</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fc;
+            color: #333;
+            padding: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #2c3e50;
+        }
+
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+
+            .card strong {
+                font-size: 1.2rem;
+                color: #34495e;
+            }
+
+        .status {
+            margin: 1rem 0;
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+
+        .buttons {
+            margin-top: 1rem;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            margin-right: 0.5rem;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+        }
+
+            button.aprovar {
+                background-color: #2ecc71;
+                color: white;
+            }
+
+            button.rejeitar {
+                background-color: #e74c3c;
+                color: white;
+            }
+
+            button:hover {
+                opacity: 0.8;
+            }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Solicitações de Empréstimo</h1>
+        <div id="lista-emprestimos"></div>
+    </div>
+
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/emprestimohub")
+            .build();
+
+        connection.on("NovaSolicitacao", emp => {
+            addEmprestimo(emp);
+        });
+
+        connection.on("StatusAtualizado", emp => {
+            const card = document.getElementById(emp.id);
+            if (card) {
+                card.innerHTML = renderEmprestimo(emp);
+            }
+        });
+
+        connection.start();
+
+        async function atualizarStatus(id, status) {
+            await fetch(`/api/emprestimos/${id}/${status}`, { method: "PUT" });
+        }
+
+        function addEmprestimo(emp) {
+            const div = document.createElement("div");
+            div.className = "card";
+            div.id = emp.id;
+            div.innerHTML = renderEmprestimo(emp);
+            document.getElementById("lista-emprestimos").appendChild(div);
+        }
+
+        function renderEmprestimo(emp) {
+            return `
+                    <strong>${emp.cliente}</strong> solicitou R$${emp.valor} em ${emp.parcelas}x
+                    <div class="status">Status: ${emp.status || "Pendente"}</div>
+                    <div class="buttons">
+                        <button class="aprovar" onclick="atualizarStatus('${emp.id}', 'Aprovado')">Aprovar</button>
+                        <button class="rejeitar" onclick="atualizarStatus('${emp.id}', 'Rejeitado')">Rejeitar</button>
+                    </div>
+                `;
+        }
+    </script>
+
+</body>
+</html>
