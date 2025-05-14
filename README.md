@@ -117,7 +117,3 @@ Program.cs
 ## 📄 Licença
 
 Este projeto é livre para uso educacional e pessoal. Sinta-se à vontade para contribuir!
-
-```
-
----
