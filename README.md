@@ -1,8 +1,3 @@
-Claro! Aqui está um `README.md` completo para seu projeto de **Empréstimos em Tempo Real com SignalR**, incluindo as três interfaces: **Cliente**, **Operador** e **Financeiro**.
-
----
-
-````markdown
 # 💸 Empréstimos em Tempo Real com SignalR
 
 Este projeto é uma aplicação simples baseada em .NET 8 + SignalR para gerenciamento de solicitações de empréstimos com atualização em tempo real. A aplicação possui três interfaces separadas:
