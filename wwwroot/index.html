@@ -1,0 +1,157 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <title>Empréstimos em Tempo Real</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1, h2 {
+            color: #111827;
+        }
+
+        .card {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 2rem;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+            button:hover {
+                background-color: #1d4ed8;
+            }
+
+        .lista {
+            list-style: none;
+            padding: 0;
+        }
+
+        .emprestimo {
+            background-color: #fff;
+            border: 1px solid #e5e7eb;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 6px;
+        }
+
+        .status {
+            font-weight: bold;
+        }
+
+            .status.aprovado {
+                color: green;
+            }
+
+            .status.rejeitado {
+                color: red;
+            }
+
+            .status.pendente {
+                color: orange;
+            }
+
+        .acoes button {
+            width: auto;
+            margin-right: 0.5rem;
+            padding: 0.5rem 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Solicitar Empréstimo</h1>
+        <input type="text" id="cliente" placeholder="Nome do Cliente" />
+        <input type="number" id="valor" placeholder="Valor (R$)" />
+        <input type="number" id="parcelas" placeholder="Parcelas" />
+        <button onclick="solicitar()">Solicitar Empréstimo</button>
+    </div>
+
+    <div class="card">
+        <h2>Solicitações</h2>
+        <ul class="lista" id="lista-emprestimos"></ul>
+    </div>
+
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/emprestimohub")
+            .build();
+
+        connection.on("StatusAtualizado", emp => {
+            const li = document.getElementById(emp.id);
+            if (li) {
+                li.innerHTML = render(emp);
+            }
+        });
+
+        connection.start();
+
+        async function solicitar() {
+            const cliente = document.getElementById("cliente").value;
+            const valor = parseFloat(document.getElementById("valor").value);
+            const parcelas = parseInt(document.getElementById("parcelas").value);
+
+            const res = await fetch("/api/emprestimos", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cliente, valor, parcelas })
+            });
+
+            const emp = await res.json();
+            addNaLista(emp);
+        }
+
+        async function atualizarStatus(id, status) {
+            await fetch(`/api/emprestimos/${id}/${status}`, { method: "PUT" });
+        }
+
+        function addNaLista(emp) {
+            const li = document.createElement("li");
+            li.id = emp.id;
+            li.className = "emprestimo";
+            li.innerHTML = render(emp);
+            document.getElementById("lista-emprestimos").prepend(li);
+        }
+
+        function render(emp) {
+            const status = (emp.status || "Pendente").toLowerCase();
+            return `
+                    <div><strong>${emp.cliente}</strong> solicitou <strong>R$${emp.valor}</strong> em <strong>${emp.parcelas}x</strong></div>
+                    <div class="status ${status}">Status: ${emp.status || "Pendente"}</div>
+                    <div class="acoes">
+                        <button onclick="atualizarStatus('${emp.id}', 'Aprovado')">Aprovar</button>
+                        <button onclick="atualizarStatus('${emp.id}', 'Rejeitado')">Rejeitar</button>
+                    </div>`;
+        }
+    </script>
+</body>
+</html>
