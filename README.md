@@ -1,114 +1,167 @@
-# 💸 Empréstimos em Tempo Real com SignalR
+```markdown
+# 📊 Sistema de Empréstimos em Tempo Real com SignalR
 
-Este projeto é uma aplicação simples baseada em .NET 8 + SignalR para gerenciamento de solicitações de empréstimos com atualização em tempo real. A aplicação possui três interfaces separadas:
+Este projeto é uma aplicação web para gerenciamento de empréstimos, com comunicação em tempo real usando **SignalR**, API RESTful com ASP.NET Core e páginas HTML interativas para diferentes perfis: **Clientes**, **Operadores** e **Financeiro**.
 
-- **Cliente**: Solicita empréstimos.
-- **Operador**: Aprova ou rejeita solicitações.
-- **Financeiro**: Visualiza e paga empréstimos aprovados.
+---
+
+## 🚀 Funcionalidades
+
+- ✍️ **Solicitação de Empréstimos** por clientes
+- 🕵️‍♂️ **Aprovação ou Recusa** por operadores
+- 💰 **Confirmação de Pagamento** pelo setor financeiro
+- 🔄 **Atualizações em tempo real** via SignalR para cada grupo de usuários
+- 📑 Interface clara e separada para cada tipo de usuário
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
-- ASP.NET Core 8 (Minimal API)
-- SignalR
-- HTML + JavaScript puro
-- CSS básico
-- Swagger (para testar a API)
+- ASP.NET Core 7.0 (Minimal APIs)
+- SignalR (para comunicação em tempo real)
+- HTML + CSS puro (sem frameworks)
+- JavaScript (client-side)
+- Entity Framework Core (persistência)
+- SQL Server (ou InMemory para testes)
 
 ---
 
-## 🚀 Como Executar o Projeto
+## 📁 Estrutura do Projeto
 
-1. **Clone o repositório**:
-
-   ```bash
-   git clone https://github.com/seu-usuario/emprestimos-signalr.git
-   cd emprestimos-signalr
-````
-
-2. **Restaure os pacotes e execute a API**:
-
-   ```bash
-   dotnet restore
-   dotnet run
-   ```
-
-3. **Acesse as interfaces** no navegador:
-
-   * Cliente: [`http://localhost:5000/cliente.html`](http://localhost:5000/cliente.html)
-   * Operador: [`http://localhost:5000/operador.html`](http://localhost:5000/operador.html)
-   * Financeiro: [`http://localhost:5000/financeiro.html`](http://localhost:5000/financeiro.html)
-   * Swagger: [`http://localhost:5000/swagger`](http://localhost:5000/swagger)
-
----
-
-## 🧩 Funcionalidades
-
-### 👤 Cliente
-
-* Preenche nome, valor e número de parcelas.
-* Solicita empréstimo via API.
-* Recebe atualização de status em tempo real.
-
-### 🧑‍💼 Operador
-
-* Recebe lista em tempo real de novas solicitações.
-* Aprova ou rejeita pedidos.
-* Atualizações refletidas automaticamente para todos.
-
-### 💰 Financeiro
-
-* Recebe somente empréstimos aprovados.
-* Pode marcar empréstimos como **"Pagos"**.
-* Atualizações transmitidas via SignalR.
-
----
-
-## 🗂️ Estrutura de Arquivos
-
-```text
-📁 wwwroot/
- ├── cliente.html
- ├── operador.html
- └── financeiro.html
-📁 Models/
- └── Emprestimo.cs
-📁 Services/
- └── EmprestimoHub.cs
-Program.cs
 ```
 
+/Projeto
+├── Controllers
+│   └── EmprestimosController.cs
+├── Hubs
+│   └── EmprestimoHub.cs
+├── Models
+│   ├── Emprestimo.cs
+│   └── Enums/StatusEmprestimo.cs
+├── Services
+│   └── EmprestimoService.cs
+├── wwwroot
+│   ├── cliente.html
+│   ├── operador.html
+│   └── financeiro.html
+├── Program.cs
+└── README.md
+
+````
+
 ---
 
-## 📦 Endpoints da API
+## 🧪 Endpoints da API
 
-| Verbo | Rota                           | Descrição                                   |
-| ----- | ------------------------------ | ------------------------------------------- |
-| POST  | /api/emprestimos               | Cria um novo empréstimo                     |
-| PUT   | /api/emprestimos/{id}/{status} | Atualiza o status do empréstimo             |
-| GET   | /api/emprestimos               | Retorna todos os empréstimos (GET opcional) |
+### `POST /api/emprestimos`
+> Solicita um novo empréstimo.
+
+**Body (JSON):**
+```json
+{
+  "cliente": "João Silva",
+  "valor": 1000.0,
+  "parcelas": 12
+}
+````
 
 ---
 
-## 📡 SignalR Eventos
+### `GET /api/emprestimos/pendentes`
 
-| Evento SignalR     | Emitido Por | Descrição                                  |
-| ------------------ | ----------- | ------------------------------------------ |
-| `NovaSolicitacao`  | API         | Enviado a todos os operadores              |
-| `StatusAtualizado` | API         | Enviado ao cliente e a todas as interfaces |
+> Lista empréstimos pendentes para aprovação (usado por operadores)
+
+---
+
+### `PUT /api/emprestimos/{id}/aprovar`
+
+> Aprova um empréstimo e notifica clientes e financeiro via SignalR.
+
+---
+
+### `PUT /api/emprestimos/{id}/recusar`
+
+> Recusa um empréstimo.
+
+---
+
+### `GET /api/emprestimos/aprovados`
+
+> Lista empréstimos aprovados (usado pelo financeiro)
+
+---
+
+### `PUT /api/emprestimos/{id}/pagar`
+
+> Marca empréstimo como pago e notifica clientes e operadores.
+
+---
+
+## 💬 SignalR - Grupos e Eventos
+
+| Grupo        | Usuários conectados     | Eventos recebidos  |
+| ------------ | ----------------------- | ------------------ |
+| `clientes`   | Páginas cliente.html    | `StatusAtualizado` |
+| `operadores` | Páginas operador.html   | `StatusAtualizado` |
+| `financeiro` | Páginas financeiro.html | `StatusAtualizado` |
+
+**Evento `StatusAtualizado(emp)`** é disparado sempre que o status do empréstimo muda.
+
+---
+
+## 🌐 Páginas HTML
+
+### 🧍 cliente.html
+
+* Solicita empréstimo
+* Recebe status em tempo real
+
+### 🧑‍💼 operador.html
+
+* Aprova ou recusa empréstimos
+* Visualiza solicitações pendentes
+
+### 🧾 financeiro.html
+
+* Visualiza empréstimos aprovados
+* Marca como pagos
+* Recebe atualizações em tempo real
+
+---
+
+## ▶️ Como Executar
+
+1. Clone o repositório:
+
+```bash
+git clone https://github.com/seu-usuario/emprestimos-signalr.git
+```
+
+2. Navegue para o projeto e execute:
+
+```bash
+dotnet run
+```
+
+3. Acesse as páginas diretamente:
+
+* [http://localhost:5000/cliente.html](http://localhost:5000/cliente.html)
+* [http://localhost:5000/operador.html](http://localhost:5000/operador.html)
+* [http://localhost:5000/financeiro.html](http://localhost:5000/financeiro.html)
 
 ---
 
 ## ✅ Melhorias Futuras
 
-* Autenticação por função (cliente, operador, financeiro).
-* Banco de dados com EF Core.
-* Histórico de status.
-* Blazor ou React no frontend.
+* Autenticação e autorização por perfil
+* Dashboard com gráficos e métricas
+* Histórico de empréstimos
+* Testes automatizados com xUnit + Testcontainers
 
 ---
 
 ## 📄 Licença
 
-Este projeto é livre para uso educacional e pessoal. Sinta-se à vontade para contribuir!
+Este projeto está licenciado sob a [MIT License](LICENSE).
+
+---

@@ -2,133 +2,93 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8" />
-    <title>Aprovar/Rejeitar Empréstimos</title>
+    <title>Operador - Aprovar Empréstimos</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f7fc;
-            color: #333;
+            background-color: #f7f9fb;
             padding: 2rem;
         }
 
         .container {
-            width: 100%;
             max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
+            margin: auto;
             background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 0 12px rgba(0,0,0,0.1);
         }
 
         h1 {
             text-align: center;
-            margin-bottom: 2rem;
-            color: #2c3e50;
+            margin-bottom: 1.5rem;
         }
 
         .card {
-            background-color: #fff;
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            background-color: #fefefe;
+            border-left: 5px solid #f39c12;
             margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
         }
-
-            .card strong {
-                font-size: 1.2rem;
-                color: #34495e;
-            }
 
         .status {
-            margin: 1rem 0;
             font-weight: bold;
-            color: #7f8c8d;
-        }
-
-        .buttons {
-            margin-top: 1rem;
+            margin-top: 0.5rem;
         }
 
         button {
+            margin-top: 0.5rem;
             padding: 0.5rem 1rem;
-            margin-right: 0.5rem;
-            cursor: pointer;
-            border-radius: 5px;
+            background-color: #2ecc71;
+            color: white;
             border: none;
+            border-radius: 4px;
+            cursor: pointer;
         }
 
-            button.aprovar {
-                background-color: #2ecc71;
-                color: white;
-            }
-
-            button.rejeitar {
-                background-color: #e74c3c;
-                color: white;
-            }
-
-            button:hover:not(:disabled) {
-                opacity: 0.8;
-            }
-
-            button:disabled {
-                opacity: 0.5;
-                cursor: default;
+            button:hover {
+                background-color: #27ae60;
             }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <h1>Solicitações de Empréstimo</h1>
-        <div id="lista-emprestimos"></div>
+        <h1>Solicitações Pendentes</h1>
+        <div id="solicitacoes"></div>
     </div>
 
     <script>
         const connection = new signalR.HubConnectionBuilder()
             .withUrl("/emprestimohub?grupo=operadores")
+            .configureLogging(signalR.LogLevel.Information)
             .build();
 
         connection.on("NovaSolicitacao", emp => {
-            addEmprestimo(emp);
-        });
-
-        connection.on("StatusAtualizado", emp => {
-            const card = document.getElementById(emp.id);
-            if (card) {
-                card.innerHTML = renderEmprestimo(emp);
-            }
-        });
-
-        connection.start().catch(err => console.error(err.toString()));
-
-        async function atualizarStatus(id, status) {
-            await fetch(`/api/emprestimos/${id}/${status}`, { method: "PUT" });
-        }
-
-        function addEmprestimo(emp) {
+            console.log("[SignalR] NovaSolicitacao recebida:", emp);
             const div = document.createElement("div");
             div.className = "card";
             div.id = emp.id;
-            div.innerHTML = renderEmprestimo(emp);
-            document.getElementById("lista-emprestimos").appendChild(div);
-        }
-
-        function renderEmprestimo(emp) {
-            // Botões habilitados somente se status for 'Aguardando'
-            const disabled = emp.status !== "Aguardando" ? "disabled" : "";
-            return `
-                    <strong>${emp.cliente}</strong> solicitou R$${emp.valor} em ${emp.parcelas}x
-                    <div class="status">Status: ${emp.status || "Aguardando"}</div>
-                    <div class="buttons">
-                        <button class="aprovar" onclick="atualizarStatus('${emp.id}', 'Aprovado')" ${disabled}>Aprovar</button>
-                        <button class="rejeitar" onclick="atualizarStatus('${emp.id}', 'Rejeitado')" ${disabled}>Rejeitar</button>
-                    </div>
+            div.innerHTML = `
+                    <strong>${emp.cliente}</strong><br/>
+                    Valor: R$${emp.valor} — ${emp.parcelas}x<br/>
+                    <div class="status">Status: ${emp.status}</div>
+                    <button onclick="aprovar('${emp.id}')">Aprovar</button>
                 `;
+            document.getElementById("solicitacoes").prepend(div);
+        });
+
+        connection.start()
+            .then(() => console.log("[SignalR] Conectado ao hub como operador."))
+            .catch(err => console.error("[SignalR] Erro ao conectar:", err));
+
+        async function aprovar(id) {
+            const res = await fetch(`/api/emprestimos/${id}/Aprovado`, { method: "PUT" });
+            const data = await res.json();
+            console.log("[PUT] Empréstimo aprovado:", data);
+            document.getElementById(id)?.remove();
         }
     </script>
-
 </body>
 </html>

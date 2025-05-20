@@ -17,8 +17,7 @@ namespace SignalREmprestimos.Services
         {
             await _hub.Clients.Group("clientes").SendAsync("StatusAtualizado", emprestimo);
             await _hub.Clients.Group("operadores").SendAsync("StatusAtualizado", emprestimo);
-            if (emprestimo.Status == "Aprovado")
-                await _hub.Clients.Group("financeiro").SendAsync("StatusAtualizado", emprestimo);
+            await _hub.Clients.Group("financeiro").SendAsync("StatusAtualizado", emprestimo);
         }
     }
 }
