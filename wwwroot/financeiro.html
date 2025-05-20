@@ -107,19 +107,18 @@
 
     <script>
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/emprestimohub")
+            .withUrl("/emprestimohub?grupo=financeiro") // Alterado para usar o grupo financeiro
             .build();
 
         connection.on("StatusAtualizado", emp => {
             atualizarEmprestimo(emp);
         });
 
-        connection.start();
+        connection.start().catch(err => console.error(err.toString()));
 
         function mostrarAba(aba) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-
             document.querySelector(`.tab[onclick*="${aba}"]`).classList.add('active');
             document.getElementById(aba).classList.add('active');
         }
@@ -131,7 +130,6 @@
         }
 
         function atualizarEmprestimo(emp) {
-            // Remove de ambas as listas se já existir
             document.getElementById(emp.id)?.remove();
 
             const div = document.createElement("div");

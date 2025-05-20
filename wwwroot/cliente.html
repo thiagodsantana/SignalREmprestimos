@@ -79,8 +79,9 @@
     </div>
 
     <script>
+        // Conecta ao grupo 'clientes'
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/emprestimohub")
+            .withUrl("/emprestimohub?grupo=clientes")
             .build();
 
         connection.on("StatusAtualizado", emp => {
@@ -88,7 +89,7 @@
             statusDiv.innerHTML = `<div class="status success">Status do seu empréstimo: ${emp.status}</div>`;
         });
 
-        connection.start();
+        connection.start().catch(err => console.error(err.toString()));
 
         async function solicitar() {
             const cliente = document.getElementById("cliente").value;
@@ -105,10 +106,16 @@
 
             if (emp.id) {
                 document.getElementById("status").innerHTML = `
-                        <div class="status success">
-                            Empréstimo solicitado com sucesso! Aguardando aprovação.
-                        </div>
-                    `;
+                    <div class="status success">
+                        Empréstimo solicitado com sucesso! Aguardando aprovação.
+                    </div>
+                `;
+            } else {
+                document.getElementById("status").innerHTML = `
+                    <div class="status error">
+                        Erro ao solicitar o empréstimo. Tente novamente.
+                    </div>
+                `;
             }
         }
     </script>

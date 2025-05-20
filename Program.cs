@@ -22,15 +22,15 @@ var app = builder.Build();
 
 app.UseCors("AllowAll");
 
-app.UseStaticFiles(); 
+app.UseStaticFiles();
 
 // Endpoint para solicitar um empréstimo
 app.MapPost("/api/emprestimos", async (Emprestimo emprestimo, IHubContext<EmprestimoHub> hub) =>
 {
     emprestimos.Add(emprestimo);
 
-    // Notifica todos os operadores conectados sobre a nova solicitação
-    await hub.Clients.All.SendAsync("NovaSolicitacao", emprestimo);
+    // Notifica apenas operadores sobre a nova solicitação
+    await hub.Clients.Group("operadores").SendAsync("NovaSolicitacao", emprestimo);
 
     return Results.Created($"/api/emprestimos/{emprestimo.Id}", emprestimo);
 });
@@ -41,20 +41,21 @@ app.MapPut("/api/emprestimos/{id}/{status}", async (string id, string status, IH
     var emprestimo = emprestimos.FirstOrDefault(e => e.Id == id);
     if (emprestimo == null) return Results.NotFound();
 
-    // Atualiza o status do empréstimo
     emprestimo.Status = status;
 
-    // Log de mudança de status
     Console.WriteLine($"Status do Empréstimo {id} alterado para: {status}");
 
-    // Envia a atualização de status para todos os clientes conectados via SignalR
-    await hub.Clients.All.SendAsync("StatusAtualizado", emprestimo);
+    // Notifica todos os grupos sobre a atualização de status
+    var grupos = new[] { "clientes", "operadores", "financeiro" };
+    foreach (var grupo in grupos)
+    {
+        await hub.Clients.Group(grupo).SendAsync("StatusAtualizado", emprestimo);
+    }
 
-    // Retorna a resposta com o status atualizado
     return Results.Ok(new { mensagem = $"Status do empréstimo {id} alterado para {status}.", emprestimo });
 });
 
-// Endpoint para listar todos os empréstimos aprovados
+// Endpoint para listar empréstimos aprovados
 app.MapGet("/api/emprestimos/aprovados", () =>
 {
     var aprovados = emprestimos.Where(e => e.Status == "Aprovado");
@@ -70,13 +71,16 @@ app.MapPut("/api/emprestimos/{id}/pagar", async (string id, IHubContext<Empresti
     emprestimo.Status = "Pago";
     Console.WriteLine($"Empréstimo {id} foi marcado como pago.");
 
-    await hub.Clients.All.SendAsync("StatusAtualizado", emprestimo);
+    var grupos = new[] { "clientes", "operadores", "financeiro" };
+    foreach (var grupo in grupos)
+    {
+        await hub.Clients.Group(grupo).SendAsync("StatusAtualizado", emprestimo);
+    }
 
     return Results.Ok(new { mensagem = $"Empréstimo {id} pago com sucesso.", emprestimo });
 });
 
-
-// Mapeia o endpoint do SignalR Hub
+// Mapeia o SignalR Hub
 app.MapHub<EmprestimoHub>("/emprestimohub");
 
 app.MapFallbackToFile("cliente.html");

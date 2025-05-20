@@ -69,8 +69,13 @@
                 color: white;
             }
 
-            button:hover {
+            button:hover:not(:disabled) {
                 opacity: 0.8;
+            }
+
+            button:disabled {
+                opacity: 0.5;
+                cursor: default;
             }
     </style>
 </head>
@@ -83,7 +88,7 @@
 
     <script>
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/emprestimohub")
+            .withUrl("/emprestimohub?grupo=operadores")
             .build();
 
         connection.on("NovaSolicitacao", emp => {
@@ -97,7 +102,7 @@
             }
         });
 
-        connection.start();
+        connection.start().catch(err => console.error(err.toString()));
 
         async function atualizarStatus(id, status) {
             await fetch(`/api/emprestimos/${id}/${status}`, { method: "PUT" });
@@ -112,12 +117,14 @@
         }
 
         function renderEmprestimo(emp) {
+            // Botões habilitados somente se status for 'Aguardando'
+            const disabled = emp.status !== "Aguardando" ? "disabled" : "";
             return `
                     <strong>${emp.cliente}</strong> solicitou R$${emp.valor} em ${emp.parcelas}x
-                    <div class="status">Status: ${emp.status || "Pendente"}</div>
+                    <div class="status">Status: ${emp.status || "Aguardando"}</div>
                     <div class="buttons">
-                        <button class="aprovar" onclick="atualizarStatus('${emp.id}', 'Aprovado')">Aprovar</button>
-                        <button class="rejeitar" onclick="atualizarStatus('${emp.id}', 'Rejeitado')">Rejeitar</button>
+                        <button class="aprovar" onclick="atualizarStatus('${emp.id}', 'Aprovado')" ${disabled}>Aprovar</button>
+                        <button class="rejeitar" onclick="atualizarStatus('${emp.id}', 'Rejeitado')" ${disabled}>Rejeitar</button>
                     </div>
                 `;
         }
