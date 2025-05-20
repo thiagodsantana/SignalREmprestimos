@@ -10,11 +10,13 @@ namespace SignalREmprestimos.Services
 
         public async Task NotificarNovaSolicitacao(Emprestimo emprestimo)
         {
+            await _hub.Clients.Group("admin").SendAsync("NovaSolicitacao", emprestimo);
             await _hub.Clients.Group("operadores").SendAsync("NovaSolicitacao", emprestimo);
         }
 
         public async Task NotificarStatusAtualizado(Emprestimo emprestimo)
         {
+            await _hub.Clients.Group("admin").SendAsync("StatusAtualizado", emprestimo);
             await _hub.Clients.Group("clientes").SendAsync("StatusAtualizado", emprestimo);
             await _hub.Clients.Group("operadores").SendAsync("StatusAtualizado", emprestimo);
             await _hub.Clients.Group("financeiro").SendAsync("StatusAtualizado", emprestimo);

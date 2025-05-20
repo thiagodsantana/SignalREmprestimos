@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <title>Financeiro - Contratos</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script src="signalrConnection.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -106,15 +107,16 @@
     </div>
 
     <script>
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/emprestimohub?grupo=financeiro") // Alterado para usar o grupo financeiro
-            .build();
+        const connection = criarConexaoSignalR("financeiro");
 
         connection.on("StatusAtualizado", emp => {
+            console.log("[SignalR - financeiro] Status atualizado:", emp);
             atualizarEmprestimo(emp);
         });
 
-        connection.start().catch(err => console.error(err.toString()));
+        connection.start()
+            .then(() => console.log("[SignalR - financeiro] Conectado."))
+            .catch(err => console.error("[SignalR - financeiro] Erro ao conectar:", err));
 
         function mostrarAba(aba) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -149,7 +151,7 @@
         function render(emp, podePagar) {
             return `
                     <strong>${emp.cliente}</strong><br/>
-                    Valor: R$${emp.valor} — ${emp.parcelas}x<br/>
+                    Valor: R$${emp.valor.toFixed(2)} — ${emp.parcelas}x<br/>
                     <div class="status">Status: ${emp.status}</div>
                     ${podePagar ? `<button onclick="marcarComoPago('${emp.id}')">Marcar como Pago</button>` : `<button disabled>Pago</button>`}
                 `;

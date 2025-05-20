@@ -2,37 +2,33 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8" />
-    <title>Solicitar Empréstimo</title>
+    <title>Solicitar Empréstimo - Cliente</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script src="signalrConnection.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f7fc;
-            color: #333;
             padding: 2rem;
         }
 
         .container {
-            width: 100%;
             max-width: 600px;
-            margin: 0 auto;
+            margin: auto;
             padding: 2rem;
             background-color: white;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
         h1 {
             text-align: center;
-            margin-bottom: 1rem;
-            color: #2c3e50;
         }
 
         input, button {
             width: 100%;
             padding: 1rem;
             margin-bottom: 1rem;
-            font-size: 1rem;
             border: 1px solid #ccc;
             border-radius: 5px;
         }
@@ -48,53 +44,51 @@
             }
 
         .status {
-            margin-top: 1rem;
             text-align: center;
             padding: 1rem;
-            background-color: #ecf0f1;
             border-radius: 5px;
         }
 
-            .status.success {
-                background-color: #2ecc71;
-                color: white;
-            }
+        .success {
+            background-color: #2ecc71;
+            color: white;
+        }
 
-            .status.error {
-                background-color: #e74c3c;
-                color: white;
-            }
+        .error {
+            background-color: #e74c3c;
+            color: white;
+        }
     </style>
 </head>
 <body>
-
     <div class="container">
         <h1>Solicitar Empréstimo</h1>
         <input type="text" id="cliente" placeholder="Nome do Cliente" required />
         <input type="number" id="valor" placeholder="Valor do Empréstimo" required />
         <input type="number" id="parcelas" placeholder="Número de Parcelas" required />
         <button onclick="solicitar()">Solicitar</button>
-
         <div id="status"></div>
     </div>
 
     <script>
-        // Conecta ao grupo 'clientes'
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/emprestimohub?grupo=clientes")
-            .build();
+        const connection = criarConexaoSignalR("clientes");
+
+        const statusDiv = document.getElementById("status");        
 
         connection.on("StatusAtualizado", emp => {
-            const statusDiv = document.getElementById("status");
-            statusDiv.innerHTML = `<div class="status success">Status do seu empréstimo: ${emp.status}</div>`;
+            console.log("[SignalR - clientes] Status atualizado:", emp);
+            statusDiv.innerHTML = `<div id="status" class="status success">Status do seu empréstimo: ${emp.status}</div>`;
         });
 
-        connection.start().catch(err => console.error(err.toString()));
-
         async function solicitar() {
-            const cliente = document.getElementById("cliente").value;
+            const cliente = document.getElementById("cliente").value.trim();
             const valor = parseFloat(document.getElementById("valor").value);
             const parcelas = parseInt(document.getElementById("parcelas").value);
+
+            if (!cliente || isNaN(valor) || isNaN(parcelas) || valor <= 0 || parcelas <= 0) {
+                statusDiv.innerHTML = `<div id="status" class="status error">Por favor, preencha todos os campos corretamente.</div>`;
+                return;
+            }
 
             const res = await fetch("/api/emprestimos", {
                 method: "POST",
@@ -105,20 +99,11 @@
             const emp = await res.json();
 
             if (emp.id) {
-                document.getElementById("status").innerHTML = `
-                    <div class="status success">
-                        Empréstimo solicitado com sucesso! Aguardando aprovação.
-                    </div>
-                `;
+                statusDiv.innerHTML = `<div id="status" class="status success">Empréstimo solicitado com sucesso!</div>`;
             } else {
-                document.getElementById("status").innerHTML = `
-                    <div class="status error">
-                        Erro ao solicitar o empréstimo. Tente novamente.
-                    </div>
-                `;
+                statusDiv.innerHTML = `<div id="status" class="status error">Erro ao solicitar. Tente novamente.</div>`;
             }
         }
     </script>
-
 </body>
 </html>
