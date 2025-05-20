@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.SignalR;
 using SignalREmprestimos.Models;
 using SignalREmprestimos.Services;
 
@@ -6,6 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Adiciona o SignalR
 builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 builder.Services.AddCors(options =>
 {
@@ -25,18 +25,18 @@ app.UseCors("AllowAll");
 app.UseStaticFiles();
 
 // Endpoint para solicitar um empréstimo
-app.MapPost("/api/emprestimos", async (Emprestimo emprestimo, IHubContext<EmprestimoHub> hub) =>
+app.MapPost("/api/emprestimos", async (Emprestimo emprestimo, INotificationService notificacaoService) =>
 {
     emprestimos.Add(emprestimo);
 
-    // Notifica apenas operadores sobre a nova solicitação
-    await hub.Clients.Group("operadores").SendAsync("NovaSolicitacao", emprestimo);
+    // Notifica operadores
+    await notificacaoService.NotificarNovaSolicitacao(emprestimo);
 
     return Results.Created($"/api/emprestimos/{emprestimo.Id}", emprestimo);
 });
 
 // Endpoint para atualizar o status de um empréstimo
-app.MapPut("/api/emprestimos/{id}/{status}", async (string id, string status, IHubContext<EmprestimoHub> hub) =>
+app.MapPut("/api/emprestimos/{id}/{status}", async (string id, string status, INotificationService notificacaoService) =>
 {
     var emprestimo = emprestimos.FirstOrDefault(e => e.Id == id);
     if (emprestimo == null) return Results.NotFound();
@@ -45,12 +45,7 @@ app.MapPut("/api/emprestimos/{id}/{status}", async (string id, string status, IH
 
     Console.WriteLine($"Status do Empréstimo {id} alterado para: {status}");
 
-    // Notifica todos os grupos sobre a atualização de status
-    var grupos = new[] { "clientes", "operadores", "financeiro" };
-    foreach (var grupo in grupos)
-    {
-        await hub.Clients.Group(grupo).SendAsync("StatusAtualizado", emprestimo);
-    }
+    await notificacaoService.NotificarStatusAtualizado(emprestimo);
 
     return Results.Ok(new { mensagem = $"Status do empréstimo {id} alterado para {status}.", emprestimo });
 });
@@ -63,7 +58,7 @@ app.MapGet("/api/emprestimos/aprovados", () =>
 });
 
 // Endpoint para marcar empréstimo como pago
-app.MapPut("/api/emprestimos/{id}/pagar", async (string id, IHubContext<EmprestimoHub> hub) =>
+app.MapPut("/api/emprestimos/{id}/pagar", async (string id, INotificationService notificacaoService) =>
 {
     var emprestimo = emprestimos.FirstOrDefault(e => e.Id == id);
     if (emprestimo == null) return Results.NotFound();
@@ -71,11 +66,7 @@ app.MapPut("/api/emprestimos/{id}/pagar", async (string id, IHubContext<Empresti
     emprestimo.Status = "Pago";
     Console.WriteLine($"Empréstimo {id} foi marcado como pago.");
 
-    var grupos = new[] { "clientes", "operadores", "financeiro" };
-    foreach (var grupo in grupos)
-    {
-        await hub.Clients.Group(grupo).SendAsync("StatusAtualizado", emprestimo);
-    }
+    await notificacaoService.NotificarStatusAtualizado(emprestimo);
 
     return Results.Ok(new { mensagem = $"Empréstimo {id} pago com sucesso.", emprestimo });
 });
